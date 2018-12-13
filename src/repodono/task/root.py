@@ -41,11 +41,25 @@ class FSRoot(BaseResourceRoot):
         # the resolved paths are normalized into some symlink that
         # exists, Path.resolve will then normalize that which may then
         # result into that path, which will reveal to an attacker that
-        # such symlinks exists.
+        # such symlinks exists with this initial target.
+
+        # So instead of
+        # full_target = self.root.joinpath(target).resolve()
+        # Do this (naturally, have the leading root fragment removed):
         parts = Path(
             normpath(self._os_root.joinpath(*Path(target).parts))).parts[1:]
-        # naturally, remove the leading root fragment before joining
-        # with the root defined for this instance.
-        target = self.root.joinpath(*parts)
-        with open(target) as fd:
+        full_target = self.root.joinpath(*parts).resolve()
+
+        try:
+            # Now, ensure that the internal symlinks are not absolute or
+            # reference outside of the declared root.
+            full_target.relative_to(self.root)
+        except ValueError:
+            raise FileNotFoundError(target)
+
+        if not full_target.is_file():
+            # Also, ensure that the items are fiels.
+            raise FileNotFoundError(target)
+
+        with open(full_target) as fd:
             return fd.read()
