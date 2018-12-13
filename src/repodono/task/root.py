@@ -14,6 +14,13 @@ class BaseResourceRoot(object):
 
     def read(self, target):
         """
+        Fetch the target and return the raw bytes
+        """
+
+        raise NotImplementedError()
+
+    def text(self, target):
+        """
         Fetch the target and return a string.
         """
 
@@ -31,7 +38,7 @@ class FSRoot(BaseResourceRoot):
         # also track the OS specific root identifier
         self._os_root = Path(self.root.root)
 
-    def read(self, target):
+    def _resolve(self, target):
         # normalize the input target by joining it with the real
         # filesystem root and use the OS specific path normalization
         # function; not using Path.resolve because it also invokes
@@ -58,8 +65,15 @@ class FSRoot(BaseResourceRoot):
             raise FileNotFoundError(target)
 
         if not full_target.is_file():
-            # Also, ensure that the items are fiels.
+            # Directories can't be read, so simply raise this.
             raise FileNotFoundError(target)
 
-        with open(full_target) as fd:
+        return full_target
+
+    def read(self, target):
+        with open(self._resolve(target), 'rb') as fd:
+            return fd.read()
+
+    def text(self, target):
+        with open(self._resolve(target), 'r') as fd:
             return fd.read()

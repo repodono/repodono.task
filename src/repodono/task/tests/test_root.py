@@ -36,17 +36,19 @@ class FSRootTestCase(unittest.TestCase):
     def test_root_relative_access(self):
         root = FSRoot(self.safe)
         target = 'readme.txt'
-        self.assertEqual('safe', root.read(target))
+        self.assertEqual(b'safe', root.read(target))
+        self.assertEqual('safe', root.text(target))
 
     def test_root_absolute_access(self):
         root = FSRoot(self.safe)
         # using forward slashes to verify support for unnormalized input
         # target which could be from some HTTP request.
-        self.assertEqual('safe', root.read('/readme.txt'))
+        self.assertEqual(b'safe', root.read('/readme.txt'))
+        self.assertEqual('safe', root.text('/readme.txt'))
 
     def test_root_traversal_blocked(self):
         root = FSRoot(self.safe)
-        self.assertEqual('safe_unsafe', root.read('../unsafe/readme.txt'))
+        self.assertEqual('safe_unsafe', root.text('../unsafe/readme.txt'))
         # verify that failure will happen with a native join
         target = sep.join([pardir, 'unsafe', 'readme.txt'])
         with open(join(str(root.root), target)) as fd:
@@ -54,6 +56,9 @@ class FSRootTestCase(unittest.TestCase):
 
     def test_non_files_blocked(self):
         root = FSRoot(self.safe)
+        with self.assertRaises(FileNotFoundError):
+            root.text('/unsafe')
+
         with self.assertRaises(FileNotFoundError):
             root.read('/unsafe')
 
@@ -71,7 +76,7 @@ class FSRootTestCase(unittest.TestCase):
 
         root = FSRoot(self.safe)
         with self.assertRaises(FileNotFoundError):
-            root.read('../unsafe/link/readme.txt')
+            root.text('../unsafe/link/readme.txt')
 
         # a more comprehensive example is that if this is not filtered,
         # attacker can infer the existence of some symlink inside /etc
@@ -93,4 +98,4 @@ class FSRootTestCase(unittest.TestCase):
 
         root = FSRoot(self.safe)
         with self.assertRaises(FileNotFoundError):
-            root.read('/link/secure.txt')
+            root.text('/link/secure.txt')
