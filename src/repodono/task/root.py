@@ -3,31 +3,11 @@
 from os.path import normpath
 from pathlib import Path
 
-
-class BaseResourceRoot(object):
-    """
-    Represents a supported base resource root.
-    """
-
-    def __init__(self, root):
-        self.root = root
-
-    def read(self, target):
-        """
-        Fetch the target and return the raw bytes
-        """
-
-        raise NotImplementedError()
-
-    def text(self, target):
-        """
-        Fetch the target and return a string.
-        """
-
-        raise NotImplementedError()
+# TODO should import from common base, but names are hard right now
+from repodono.task import _root
 
 
-class FSRoot(BaseResourceRoot):
+class FSRoot(_root.BaseResourceRoot):
     """
     Lock a directory as the root dir for some operations.
     """
