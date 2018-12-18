@@ -39,6 +39,9 @@ setup(
         # -*- Extra requirements: -*-
     ],
     extras_require={
+        'requests': [
+            'requests',
+        ],
     },
     python_requires='>=3.4',
     entry_points={

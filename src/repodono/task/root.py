@@ -4,10 +4,20 @@ from os.path import normpath
 from pathlib import Path
 
 # TODO should import from common base, but names are hard right now
-from repodono.task import _root
+from repodono.task._root import (
+    NotImplementedResourceRoot,
+    BaseResourceRoot,
+)
+from repodono.task import _requests_root
+
+RequestsRoot = (
+    NotImplementedResourceRoot
+    if _requests_root._session is NotImplemented else
+    _requests_root.RequestsRoot
+)
 
 
-class FSRoot(_root.BaseResourceRoot):
+class FSRoot(BaseResourceRoot):
     """
     Lock a directory as the root dir for some operations.
     """

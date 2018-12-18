@@ -1,5 +1,6 @@
 import unittest
 
+from collections import namedtuple
 from os import mkdir
 from os.path import join
 from os.path import pardir
@@ -8,6 +9,24 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from repodono.task.root import FSRoot
+from repodono.task.root import BaseResourceRoot
+from repodono.task.root import NotImplementedResourceRoot
+from repodono.task.root import RequestsRoot
+
+
+class NotImplementedTestCase(unittest.TestCase):
+
+    def test_not_implemented(self):
+        with self.assertRaises(NotImplementedError):
+            NotImplementedResourceRoot(None)
+
+        root = BaseResourceRoot(None)
+
+        with self.assertRaises(NotImplementedError):
+            root.text('foo')
+
+        with self.assertRaises(NotImplementedError):
+            root.read('foo')
 
 
 class FSRootTestCase(unittest.TestCase):
@@ -99,3 +118,45 @@ class FSRootTestCase(unittest.TestCase):
         root = FSRoot(self.safe)
         with self.assertRaises(FileNotFoundError):
             root.text('/link/secure.txt')
+
+
+@unittest.skipIf(
+    RequestsRoot is NotImplementedResourceRoot,
+    'the requests package is not installed')
+class RequestsRootTestCase(unittest.TestCase):
+    """
+    The tests in this class are structured such that the proper API
+    calls through the requests library are used .
+    """
+
+    FakeResponse = namedtuple('FakeResponse', ['content', 'text'])
+
+    def setUp(self):
+        # default response.
+        self.response = self.FakeResponse(b'content', 'text')
+
+    def fake_session(self):
+        class FakeSession(object):
+            def get(self_, target):
+                return self.response
+
+        return FakeSession()
+
+    def test_fail(self):
+        with self.assertRaises(ImportError):
+            RequestsRoot(NotImplemented)
+
+    def test_base(self):
+        root = RequestsRoot()
+        # just check for existence.
+        self.assertTrue(root.root)
+
+    def test_access(self):
+        root = RequestsRoot(self.fake_session())
+        self.assertEqual('text', root.text('somewhere'))
+        self.assertEqual(b'content', root.read('somewhere'))
+
+        # change the response
+        self.response = self.FakeResponse(b'binary', 'readable')
+        self.assertEqual('readable', root.text('somewhere'))
+        self.assertEqual(b'binary', root.read('somewhere'))

@@ -22,3 +22,9 @@ class BaseResourceRoot(object):
         """
 
         raise NotImplementedError()
+
+
+class NotImplementedResourceRoot(object):
+
+    def __init__(self, root):
+        raise NotImplementedError()
