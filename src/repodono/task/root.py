@@ -54,6 +54,11 @@ class FSRoot(BaseResourceRoot):
         except ValueError:
             raise FileNotFoundError(target)
 
+        return full_target
+
+    def _resolve_file(self, target):
+        full_target = self._resolve(target)
+
         if not full_target.is_file():
             # Directories can't be read, so simply raise this.
             raise FileNotFoundError(target)
@@ -61,9 +66,9 @@ class FSRoot(BaseResourceRoot):
         return full_target
 
     def read(self, target):
-        with open(self._resolve(target), 'rb') as fd:
+        with open(self._resolve_file(target), 'rb') as fd:
             return fd.read()
 
     def text(self, target):
-        with open(self._resolve(target), 'r') as fd:
+        with open(self._resolve_file(target), 'r') as fd:
             return fd.read()
