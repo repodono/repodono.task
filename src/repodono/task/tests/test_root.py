@@ -58,6 +58,21 @@ class FSRootTestCase(unittest.TestCase):
         self.assertEqual(b'safe', root.read(target))
         self.assertEqual('safe', root.text(target))
 
+    def test_root_subdir_access(self):
+        root = FSRoot(self.base.name)
+        target = ['safe', 'readme.txt']
+
+        # joined path
+        self.assertEqual(b'safe', root.read(sep.join(target)))
+        self.assertEqual('safe', root.text(sep.join(target)))
+
+        # raw list access
+        self.assertEqual(b'safe', root.read(target))
+        self.assertEqual('safe', root.text(target))
+
+        with self.assertRaises(TypeError):
+            root.read(object)
+
     def test_root_absolute_access(self):
         root = FSRoot(self.safe)
         # using forward slashes to verify support for unnormalized input

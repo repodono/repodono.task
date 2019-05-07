@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from collections import Iterable
 from os.path import normpath
 from pathlib import Path
 
@@ -29,6 +30,14 @@ class FSRoot(BaseResourceRoot):
         self._os_root = Path(self.root.root)
 
     def _resolve(self, target):
+        if isinstance(target, str):
+            subparts = Path(target).parts
+        elif isinstance(target, Iterable):
+            subparts = tuple(target)
+        else:
+            raise TypeError(
+                "'root' must be either str or an iterable of strs")
+
         # normalize the input target by joining it with the real
         # filesystem root and use the OS specific path normalization
         # function; not using Path.resolve because it also invokes
@@ -44,7 +53,7 @@ class FSRoot(BaseResourceRoot):
         # full_target = self.root.joinpath(target).resolve()
         # Do this (naturally, have the leading root fragment removed):
         parts = Path(
-            normpath(self._os_root.joinpath(*Path(target).parts))).parts[1:]
+            normpath(self._os_root.joinpath(*subparts))).parts[1:]
         full_target = self.root.joinpath(*parts).resolve()
 
         try:
