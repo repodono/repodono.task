@@ -8,10 +8,12 @@ from os.path import sep
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from repodono.task.root import FSRoot
-from repodono.task.root import BaseResourceRoot
-from repodono.task.root import NotImplementedResourceRoot
-from repodono.task.root import RequestsRoot
+from repodono.task.root import (
+    FSRoot,
+    BaseResourceRoot,
+    NotImplementedResourceRoot,
+    RequestsRoot,
+)
 
 
 class NotImplementedTestCase(unittest.TestCase):
@@ -51,6 +53,39 @@ class FSRootTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.base.cleanup()
+
+    def test_root_resolve_normal(self):
+        root = FSRoot(self.safe)
+        self.assertEqual(
+            Path(join(self.safe, 'target')),
+            root.resolve('target'),
+        )
+
+        self.assertEqual(
+            Path(join(self.safe, 'target')),
+            root.resolve('/target'),
+        )
+
+        self.assertEqual(
+            Path(join(self.safe, 'target')),
+            root.resolve('../target'),
+        )
+
+    def test_root_resolve_symlink_blocked(self):
+        raw_dir = join(self.unsafe, 'outside')
+        mkdir(raw_dir)
+
+        symlink = Path(join(self.safe, 'link'))
+        # to simplify inferrence filtering, create an actual valid link
+        # inside the unsafe directory that links to a valid location
+        symlink.symlink_to(self.unsafe)
+        # ensure that the link is created correctly such that this test
+        # case will execute as expected
+        self.assertTrue(symlink.resolve().samefile(self.unsafe))
+
+        root = FSRoot(self.safe)
+        with self.assertRaises(FileNotFoundError):
+            root.resolve('link')
 
     def test_root_relative_access(self):
         root = FSRoot(self.safe)
@@ -100,17 +135,14 @@ class FSRootTestCase(unittest.TestCase):
         raw_dir = join(self.unsafe, 'outside')
         mkdir(raw_dir)
 
-        symlink = Path(join(self.unsafe, 'link'))
-        # to simplify inferrence filtering, create an actual valid link
-        # inside the unsafe directory that links to a valid location
-        symlink.symlink_to(self.safe, target_is_directory=True)
-        # ensure that the link is created correctly such that this test
-        # case will execute as expected
-        self.assertTrue(symlink.resolve().samefile(self.safe))
+        # repeating the resolve test
+        symlink = Path(join(self.safe, 'link'))
+        symlink.symlink_to(self.unsafe)
+        self.assertTrue(symlink.resolve().samefile(self.unsafe))
 
         root = FSRoot(self.safe)
         with self.assertRaises(FileNotFoundError):
-            root.text('../unsafe/link/readme.txt')
+            root.text('link/readme.txt')
 
         # a more comprehensive example is that if this is not filtered,
         # attacker can infer the existence of some symlink inside /etc

@@ -29,14 +29,21 @@ class FSRoot(BaseResourceRoot):
         # also track the OS specific root identifier
         self._os_root = Path(self.root.root)
 
+    def _join_path_parts(self, parts):
+        yield self.root.joinpath(*parts).resolve()
+
     def _resolve(self, target):
+        """
+        Generator for valid full_targets
+        """
+
         if isinstance(target, str):
             subparts = Path(target).parts
         elif isinstance(target, Iterable):
             subparts = tuple(target)
         else:
             raise TypeError(
-                "'root' must be either str or an iterable of strs")
+                "'target' must be either str or an iterable of strs")
 
         # normalize the input target by joining it with the real
         # filesystem root and use the OS specific path normalization
@@ -54,30 +61,42 @@ class FSRoot(BaseResourceRoot):
         # Do this (naturally, have the leading root fragment removed):
         parts = Path(
             normpath(self._os_root.joinpath(*subparts))).parts[1:]
-        full_target = self.root.joinpath(*parts).resolve()
 
-        try:
-            # Now, ensure that the internal symlinks are not absolute or
-            # reference outside of the declared root.
-            full_target.relative_to(self.root)
-        except ValueError:
-            raise FileNotFoundError(target)
+        for full_target in self._join_path_parts(parts):
+            try:
+                # Now, ensure that the internal symlinks are not absolute or
+                # reference outside of the declared root.
+                full_target.relative_to(self.root)
+            except ValueError:
+                continue
 
-        return full_target
+            yield full_target
+
+    def resolve(self, target):
+        """
+        Resolve target from this root on the filesystem.  If the
+        provided target is valid, return the Path object.
+        """
+
+        for full_target in self._resolve(target):
+            return full_target
+        raise FileNotFoundError(target)
 
     def _resolve_file(self, target):
-        full_target = self._resolve(target)
-
-        if not full_target.is_file():
-            # Directories can't be read, so simply raise this.
+        for resolved_target in self._resolve(target):
+            if resolved_target.is_file():
+                return resolved_target
+        else:
+            # ran out of targets
             raise FileNotFoundError(target)
 
-        return full_target
+    def _read_target_fd(self, target, fd):
+        return fd.read()
 
     def read(self, target):
         with open(self._resolve_file(target), 'rb') as fd:
-            return fd.read()
+            return self._read_target_fd(target, fd)
 
     def text(self, target):
         with open(self._resolve_file(target), 'r') as fd:
-            return fd.read()
+            return self._read_target_fd(target, fd)
