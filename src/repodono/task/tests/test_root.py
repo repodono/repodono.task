@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 
 from repodono.task.root import (
     FSRoot,
+    FilterFextRoot,
     BaseResourceRoot,
     NotImplementedResourceRoot,
     RequestsRoot,
@@ -207,3 +208,53 @@ class RequestsRootTestCase(unittest.TestCase):
         self.response = self.FakeResponse(b'binary', 'readable')
         self.assertEqual('readable', root.text('somewhere'))
         self.assertEqual(b'binary', root.read('somewhere'))
+
+
+class FilterFextRootTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.base = TemporaryDirectory()
+        self.root = join(self.base.name, 'root')
+        mkdir(self.root)
+
+        with open(join(self.root, 'readme.txt'), 'w') as fd:
+            fd.write('text file')
+
+        with open(join(self.root, 'readme.rst'), 'w') as fd:
+            fd.write('restructured text file')
+
+        with open(join(self.root, 'readme.md'), 'w') as fd:
+            fd.write('markdown file')
+
+    def tearDown(self):
+        self.base.cleanup()
+
+    def test_resolution_default(self):
+        root = FilterFextRoot(self.root, (
+            ('.txt', FilterFextRoot.default),
+        ))
+        # filename extension will be automatically added
+        target = 'readme'
+        self.assertEqual('text file', root.text(target))
+
+    def test_resolution_must_have_prefix(self):
+        root = FilterFextRoot(self.root, (
+            ('txt', FilterFextRoot.default),
+        ))
+        target = 'readme.'
+        # the raw 'txt' suffix, lacking the '.', will be ignored.
+        with self.assertRaises(FileNotFoundError):
+            root.text(target)
+
+    def test_resolution_order(self):
+        def markdown_filter(text):
+            return '<p>%s</p>' % text
+
+        # precedence results
+        root = FilterFextRoot(self.root, (
+            ('.md', markdown_filter),
+            ('.txt', FilterFextRoot.default),
+        ))
+        # filename extension will be automatically added
+        target = 'readme'
+        self.assertEqual('<p>markdown file</p>', root.text(target))

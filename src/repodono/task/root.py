@@ -94,9 +94,44 @@ class FSRoot(BaseResourceRoot):
         return fd.read()
 
     def read(self, target):
-        with open(self._resolve_file(target), 'rb') as fd:
-            return self._read_target_fd(target, fd)
+        resolved_target = self._resolve_file(target)
+        with open(resolved_target, 'rb') as fd:
+            return self._read_target_fd(resolved_target, fd)
 
     def text(self, target):
-        with open(self._resolve_file(target), 'r') as fd:
-            return self._read_target_fd(target, fd)
+        resolved_target = self._resolve_file(target)
+        with open(resolved_target, 'r') as fd:
+            return self._read_target_fd(resolved_target, fd)
+
+
+class FilterFextRoot(FSRoot):
+
+    def __init__(self, root, fext_filters):
+        """
+        Arguments:
+
+        root
+            The root for this instance
+        fext_filters
+            The list of file extension filters
+        """
+
+        self._fext_filters_map = dict(fext_filters)
+        self._fext_filters = tuple(self._fext_filters_map.items())
+        super().__init__(root)
+
+    @staticmethod
+    def default(content):
+        return content
+
+    def _join_path_parts(self, parts):
+        for fext, filters in self._fext_filters:
+            if fext[:1] != '.':
+                # silently ignoring badly defined filename extensions
+                continue
+            yield self.root.joinpath(
+                *(parts[:-1] + (parts[-1] + fext,))
+            ).resolve()
+
+    def _read_target_fd(self, target, fd):
+        return self._fext_filters_map[target.suffix](fd.read())
