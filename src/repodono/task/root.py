@@ -103,6 +103,13 @@ class FSRoot(BaseResourceRoot):
         with open(resolved_target, 'r') as fd:
             return self._read_target_fd(resolved_target, fd)
 
+    def iterdir_parts(self, target):
+        for entry in self.resolve(target).iterdir():
+            yield entry.relative_to(self.root).parts
+
+    def listdir_parts(self, target):
+        return list(self.iterdir_parts(target))
+
 
 class FilterFextRoot(FSRoot):
 

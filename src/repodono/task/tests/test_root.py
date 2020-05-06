@@ -167,6 +167,18 @@ class FSRootTestCase(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             root.text('/link/secure.txt')
 
+    def test_listdir_parts(self):
+        root = FSRoot(self.base.name)
+        self.assertEqual([
+            ('safe',),
+            ('unsafe',),
+        ], root.listdir_parts(''))
+
+        self.assertEqual([
+            ('safe', 'readme.txt',),
+            ('safe', 'unsafe',),
+        ], root.listdir_parts('safe'))
+
 
 @unittest.skipIf(
     RequestsRoot is NotImplementedResourceRoot,
