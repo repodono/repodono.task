@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from collections import Iterable
+from collections.abc import Iterable
 from os.path import normpath
 from pathlib import Path
 
